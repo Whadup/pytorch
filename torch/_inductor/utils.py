@@ -1842,6 +1842,9 @@ def is_tf32_supported() -> bool:
     if not torch.version.hip:
         return True
     else:
+        gcn_arch = str(torch.cuda.get_device_properties(0).gcnArchName.split(":", 1)[0])
+        if "gfx90a" not in gcn_arch:
+            return False
         triton_version = tuple(int(v) for v in triton.__version__.split("."))
         if triton_version < (3, 2, 0):
             return False
