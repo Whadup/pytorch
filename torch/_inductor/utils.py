@@ -1846,7 +1846,7 @@ def is_tf32_supported() -> bool:
         if "gfx90a" not in gcn_arch:
             return False
         triton_version = tuple(int(v) for v in triton.__version__.split("."))
-        if triton_version < (3, 2, 0):
+        if triton_version < (3, 3, 0):
             return False
         else:
             return True
@@ -1854,7 +1854,6 @@ def is_tf32_supported() -> bool:
 
 def is_welford_reduction(reduction_type: str) -> bool:
     return reduction_type.startswith("welford")
-
 
 
 def reduction_num_outputs(reduction_type: str) -> int:
