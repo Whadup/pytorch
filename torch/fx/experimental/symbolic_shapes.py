@@ -3453,6 +3453,7 @@ class ShapeEnv:
             "var_to_range_sloc",
             "replacements_slocs",
             "_resimplify_floor_div_axioms",
+            "_expr_sym_node_id",
         )
 
         # Mapping of the value of each to-be-compared field into the values that
@@ -5972,7 +5973,7 @@ class ShapeEnv:
             metadata_fn=lambda: {
                 "expr": repr(expr),
                 "unhinted_expr": repr(unhinted_expr),
-                "expr_id": expr_sym_node_id,
+                "expr_id": self._expr_sym_node_id,
                 "stack": structured.from_traceback(
                     CapturedTraceback.extract(skip=1).summary()
                 ),
@@ -6587,6 +6588,25 @@ class ShapeEnv:
                 stack_info=is_debug,
             )
 
+    # A local variable to evaluate_expr stored in the class to avoid
+    # using it for the lru_cache that is on top of it since it does
+    # not effect the results. When needed its read directly.
+    _expr_sym_node_id: Optional[int] = None
+
+    def evaluate_sym_node(
+        self,
+        sym_node: SymNode,
+        size_oblivious: bool = False,
+    ) -> sympy.Basic:
+        """
+        Given a a SymNode, evaluates sym_node.expr, adding guards if necessary.
+        """
+
+        self._expr_sym_node_id = id(sym_node)
+        return self.evaluate_expr(
+            sym_node.expr, sym_node.hint, sym_node.fx_node, size_oblivious
+        )
+
     @lru_cache(256)
     @record_shapeenv_event(save_tracked_fakes=True)
     def evaluate_expr(
@@ -6595,7 +6615,6 @@ class ShapeEnv:
         hint: Optional[Union[int, bool, float]] = None,
         fx_node: Optional[torch.fx.Node] = None,
         size_oblivious: bool = False,
-        expr_sym_node_id: Optional[int] = None,
         *,
         forcing_spec: bool = False,
     ) -> sympy.Basic:
@@ -6605,7 +6624,6 @@ class ShapeEnv:
                 hint,
                 fx_node,
                 size_oblivious,
-                expr_sym_node_id,
                 forcing_spec=forcing_spec,
             )
         except Exception:
@@ -6624,7 +6642,6 @@ class ShapeEnv:
         hint: Optional[Union[bool, int, float]] = None,
         fx_node: Optional[torch.fx.Node] = None,
         size_oblivious: bool = False,
-        expr_sym_node_id: Optional[int] = None,
         *,
         forcing_spec: bool = False,
     ) -> sympy.Basic:
@@ -6803,7 +6820,7 @@ class ShapeEnv:
                             metadata_fn=lambda: {
                                 "expr": repr(orig_expr),
                                 "result": repr(unsound_result),
-                                "expr_node_id": expr_sym_node_id,
+                                "expr_node_id": self._expr_sym_node_id,
                                 "user_stack": structured.get_user_stack(3),
                                 "stack": structured.get_framework_stack(3),
                                 "symbol_to_sources": {
@@ -6823,7 +6840,7 @@ class ShapeEnv:
                             expr.xreplace(self.var_to_val),
                             expr,
                             size_oblivious_result=size_oblivious_result,
-                            expr_sym_node_id=expr_sym_node_id,
+                            expr_sym_node_id=self._expr_sym_node_id,
                         )
                 else:
                     expr = new_expr
