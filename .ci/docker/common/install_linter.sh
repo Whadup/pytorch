@@ -13,6 +13,7 @@ chown -R jenkins pytorch
 
 pushd pytorch
 # Install all linter dependencies
+pip install -r requirements.txt
 lintrunner init
 
 # Cache .lintbin directory as part of the Docker image
