@@ -41,7 +41,7 @@ import typing
 import weakref
 from pathlib import Path
 from types import CellType, CodeType, FunctionType, ModuleType
-from typing import Any, Callable, Optional, TypeVar, Union
+from typing import Any, Callable, TypeVar
 from typing_extensions import ParamSpec
 from weakref import ReferenceType
 
@@ -147,7 +147,7 @@ from .utils import (
 from .variables.torch_function import torch_function_mode_stack_state_mgr
 
 
-np: Optional[ModuleType]
+np: ModuleType | None
 try:
     import numpy as np
 except ModuleNotFoundError:
@@ -199,12 +199,12 @@ class Tracker:
 input_codes = Tracker()
 output_codes = Tracker()
 
-initial_global_state: Optional[GlobalStateGuard] = None
+initial_global_state: GlobalStateGuard | None = None
 
 
 @functools.wraps(original_forward_from_src)
 def fx_forward_from_src_skip_result(
-    src: str, globals: dict[str, Any], co_fields: Optional[dict[str, str]] = None
+    src: str, globals: dict[str, Any], co_fields: dict[str, str] | None = None
 ) -> FunctionType:
     # we monkey patch FX to prevent infinite loop of trying to convert
     # our generated code
@@ -367,7 +367,7 @@ def has_tensor_in_frame(frame: DynamoFrameType) -> bool:
 def exception_handler(
     e: Exception,
     code: CodeType,
-    frame: Optional[DynamoFrameType] = None,
+    frame: DynamoFrameType | None = None,
     export: bool = False,
 ) -> None:
     record_filename = None
@@ -380,9 +380,7 @@ def exception_handler(
 
 
 FRAME_COUNTER = 0
-FRAME_COMPILE_COUNTER: typing.Counter[Union[int, FrameStateSizeEntry]] = (
-    collections.Counter()
-)
+FRAME_COMPILE_COUNTER: typing.Counter[int | FrameStateSizeEntry] = collections.Counter()
 
 
 def maybe_cprofile(func: Callable[_P, _T]) -> Callable[_P, _T]:
@@ -462,7 +460,7 @@ class ConvertFrameAssert:
         compiler_fn: CompilerFn,
         one_graph: bool = True,
         export: bool = False,
-        export_constraints: Optional[typing.Never] = None,
+        export_constraints: typing.Never | None = None,
     ) -> None:
         # assert export_constraints is None
         reset_graph_break_dup_checker()
@@ -480,9 +478,9 @@ class ConvertFrameAssert:
     def __call__(
         self,
         frame: DynamoFrameType,
-        cache_entry: Optional[CacheEntry],
+        cache_entry: CacheEntry | None,
         hooks: Hooks,
-        frame_state: dict[str, Union[int, FrameStateSizeEntry]],
+        frame_state: dict[str, int | FrameStateSizeEntry],
         *,
         skip: int = 0,
     ) -> ConvertFrameReturn:
@@ -615,7 +613,7 @@ def convert_frame_assert(
     compiler_fn: CompilerFn,
     one_graph: bool = True,
     export: bool = False,
-    export_constraints: Optional[typing.Never] = None,
+    export_constraints: typing.Never | None = None,
 ) -> ConvertFrameAssert:
     """Fully convert a frame into an FX graph"""
     return ConvertFrameAssert(compiler_fn, one_graph, export, export_constraints)
@@ -652,12 +650,12 @@ def _compile(
     compiler_fn: CompilerFn,
     one_graph: bool,
     export: bool,
-    export_constraints: Optional[typing.Never],
+    export_constraints: typing.Never | None,
     hooks: Hooks,
-    cache_entry: Optional[CacheEntry],
+    cache_entry: CacheEntry | None,
     cache_size: CacheSizeRelevantForFrame,
-    frame: Optional[DynamoFrameType] = None,
-    frame_state: Optional[dict[str, Union[int, FrameStateSizeEntry]]] = None,
+    frame: DynamoFrameType | None = None,
+    frame_state: dict[str, int | FrameStateSizeEntry] | None = None,
     *,
     compile_id: CompileId,
     skip: int = 0,
@@ -672,8 +670,8 @@ def _compile(
     # Only nonlocal defs here please!
     # Time spent compiling this frame before restarting or failing analysis
     dynamo_time_before_restart: float = 0.0
-    output: Optional[OutputGraph] = None
-    tracer: Optional[InstructionTranslator] = None
+    output: OutputGraph | None = None
+    tracer: InstructionTranslator | None = None
 
     tf_mode_stack: list[torch.overrides.TorchFunctionMode] = (
         torch.overrides._get_current_function_mode_stack()
@@ -941,7 +939,7 @@ def _compile(
             distributed_state = None
 
         # Check recompilations
-        recompile_reason: Optional[str] = None
+        recompile_reason: str | None = None
         if is_recompilation(cache_size) and frame:
             reasons = get_and_maybe_log_recompilation_reasons(cache_entry, frame)
             recompile_reason = (
@@ -1043,10 +1041,10 @@ def _compile(
             },
         )
         start_time_ns = time.time_ns()
-        fail_type: Optional[str] = None
-        fail_reason: Optional[str] = None
-        fail_user_frame_filename: Optional[str] = None
-        fail_user_frame_lineno: Optional[int] = None
+        fail_type: str | None = None
+        fail_reason: str | None = None
+        fail_user_frame_filename: str | None = None
+        fail_user_frame_lineno: int | None = None
         torch._dynamo.utils.ReinplaceCounters.clear()
         guarded_code = None
         try:
@@ -1193,9 +1191,9 @@ class ConvertFrame:
     def __call__(
         self,
         frame: DynamoFrameType,
-        cache_entry: Optional[CacheEntry],
+        cache_entry: CacheEntry | None,
         hooks: Hooks,
-        frame_state: dict[str, Union[int, FrameStateSizeEntry]],
+        frame_state: dict[str, int | FrameStateSizeEntry],
         skip: int = 0,
     ) -> ConvertFrameReturn:
         counters["frames"]["total"] += 1
@@ -1335,9 +1333,9 @@ class ConvertFrameProtocol(typing.Protocol):
     def __call__(
         self,
         frame: DynamoFrameType,
-        cache_entry: Optional[CacheEntry],
+        cache_entry: CacheEntry | None,
         hooks: Hooks,
-        frame_state: dict[str, Union[int, FrameStateSizeEntry]],
+        frame_state: dict[str, int | FrameStateSizeEntry],
         *,
         skip: int = 0,
     ) -> ConvertFrameReturn: ...
@@ -1352,8 +1350,8 @@ class CatchErrorsWrapper:
     def __call__(
         self,
         frame: DynamoFrameType,
-        cache_entry: Optional[CacheEntry],
-        frame_state: dict[str, Union[int, FrameStateSizeEntry]],
+        cache_entry: CacheEntry | None,
+        frame_state: dict[str, int | FrameStateSizeEntry],
     ) -> ConvertFrameReturn:
         assert frame_state is not None
 
