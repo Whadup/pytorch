@@ -343,8 +343,8 @@ case "$image" in
     ANACONDA_PYTHON_VERSION=3.9
     CONDA_CMAKE=yes
     ;;
-  pytorch-linux-jammy-cuda11.8-cudnn9-py3.9-linter)
-    ANACONDA_PYTHON_VERSION=3.9
+  pytorch-linux-jammy-cuda11.8-cudnn9-py3.10-linter)
+    ANACONDA_PYTHON_VERSION=3.10
     CUDA_VERSION=11.8
     CONDA_CMAKE=yes
     ;;

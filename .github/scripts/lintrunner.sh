@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 set -ex
 
-# The generic Linux job chooses to use base env, not the one setup by the image
-CONDA_ENV=$(conda env list --json | jq -r ".envs | .[-1]")
-eval "$(command conda 'shell.bash' 'hook' 2> /dev/null)"
-conda activate "${CONDA_ENV}"
+python3 --version
+python --version
+pip --version
+pip3 --version
+python -m pip --version
+python3 -m pip --version
 
 # Use uv to speed up lintrunner init
 python3 -m pip install uv==0.1.45
+
+# Create a venv since uv does not work with --user
+python -m venv ${HOME}/lint --system-site-packages
+source ${HOME}/lint/bin/activate
 
 CACHE_DIRECTORY="/tmp/.lintbin"
 # Try to recover the cached binaries
@@ -23,7 +29,7 @@ if ! command -v lintrunner &> /dev/null; then
 fi
 
 # This has already been cached in the docker image
-lintrunner init 2> /dev/null
+lintrunner init
 
 # Do build steps necessary for linters
 if [[ "${CLANG}" == "1" ]]; then
